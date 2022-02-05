@@ -1,0 +1,200 @@
+---
+title: "Toronto Apartment Building Conditions can be Improved"
+subtitle: ""
+author: 
+  - Zhiyi Liu
+thanks: "Code and data are available at: LINK."
+date: "`r format(Sys.time(), '04 02 2021')`"
+abstract: "Examining apartment building conditions are critical to ensuring the living conditions of residents. The data examined in the paper Apartment Building Registration is retrieved from Open Data Toronto. The paper examines the condition of Toronto apartment buildings through safety and convenience conditions. The results found that some aspects can be improved. "
+output:
+  bookdown::pdf_document2
+toc: FALSE
+bibliography: references2.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(opendatatoronto)
+library(patchwork)
+# get package
+package <- show_package("2b98b3f3-4f3a-42a4-a4e9-b44d3026595a")
+package
+
+# get all resources for this package
+resources <- list_package_resources("2b98b3f3-4f3a-42a4-a4e9-b44d3026595a")
+
+# identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+
+# load the first datastore resource as a sample
+data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+data
+```
+
+
+# Introduction
+
+The quality of apartment buildings directly relate to the living conditions of the residents. Whether building owners did the maintenance can be examine through the overall condition of the buildings. Thus, it is important to monitor the conditions of the buildings to ensure the safety and convenience of residents. The apartment buildings of Toronto are examined upon registration and updated each year to ensure the building is in good conditions. Buildings will also be evaluated based on the information provided. All conditions of the buildings are documented in the dataset Apartment Building Registration. The data is available on Open Data Toronto, accessible to the general public.
+
+This paper explores the dataset Apartment Building Registration to seek overall conditions of apartment buildings in Toronto. There are 3486 buildings recorded. Various aspects of the conditions are examined. The dataset contains 70 variables, including numerical, categorical and descriptive variables recording the conditions of the facilities and the systems used by the building. The numeric and category variables are easy to analyze. However, the descriptive variables contains unique description of each building, which takes time and effort to be summarized by data analytic tools. 
+
+The paper talks about the source of the data \@ref(source), the methodology \@ref(methodology), and data characteristics \@ref(data characteristics). To see the conditions of the buildings, the paper examines the dataset through two aspects, safety and convenience. The safety aspect looks at the sprinkler system, an approved fire safety plan and emergency power system. A third of buildings still do not have sprinklers and half of buildings do not have emergency power system. On the convenience side, half of the buildings do not have locker rooms or a storage space for residents. The average available parking spots for each building is less than 7. Eventhough the conditions are overall good, there is still improvements to make. 
+
+# Data
+
+## Source
+
+The name of the dataset is called the Apartment Building Registration. The data set was retrieved on The Toronto Open Data Portal through the R package opendatatoronto [@open]. It is a free data portal accessible to the general public. The research was conducted under a by-law residential inspection program called RentSafeTO (RentSafeTO 2020). All residential apartments with 3 or more storeys and 10 or more units that are registered in the system are inspected. The goal of the program is to ensure that building owners meet maintenance standards. All information collected in the dataset was based on the formal criteria of how well did the building owners served the residents. The criteria are defined by the sub-program called Apartment Building Standard program under the RentSafeTO. The purpose of collecting information of buildings is to complete an evaluation under the same program RentSafeTO. More information can be found on their website. 
+
+## Methodology
+Information was collected on the date of initial registration and  updated when the building owners renew their registrations each year. The dataset is refreshed on a monthly basis. The time of update for each building is indicated in the dataset. The full dataset contains 3486 buildings (Apartment Building Registration, 2022). Each building is represented by an observation. Since the research provides building conditions from a wide range of aspects, the dataset contains 70 variables. Some variables are number of storeys, number of units, approved fire safety plan, annual fire alarm test records, bike parking, heating type, number of elevators, etc.
+
+The software used to analyze the dataset is R studio, an open source statistical analyzing program [@citeR]. In addition, packages used are tidyverse [@tidy] and patchwork [@patch].
+
+## Data Characteristics 
+
+The variables in the dataset includes numbers, categories and descriptions. Number variables are in character form. Most categories are binary, in the form of 'YES' and 'NO'. Descriptions depict the space available in the building, which varies across different observations. The descriptive variables have the vast majority of values missing, which is hard to analyze. 
+
+The data source has several strength. Since the information was collected by a mandatory program by the government, all registered buildings are required to do the assessment. This contributed to the completeness of the dataset. The information is also up to date due to the yearly renewal policy. The Open Data Toronto portal provides free-access dataset as mentioned before. It makes replicating this paper more feasible. It contribute to the reproducible factor. More specifically about the dataset itself, the source has a wide range of aspects. It gives a holistic view of the building conditions in Toronto. On the other hand, the source has a few weaknesses. Given that the dataset is collected by the government, the primary source is very hard to replicate. In other words, we cannot easily conduct the research again to verify the conditions of every building. Moreover, some numeric variables are in character form, making it hard for developers to do analysis. Some values within the same variable are not formatted in the same manner. There are few variables with empty values for all observations. For instance, the variable NO_OF_UNITS is empty. Another variable CONFIRMED_UNITS has values in it. Assuming the two are indicating the same thing, NO_OF_UNITS would be extra in the dataset. 
+
+Diving into the data, the dataset, the dataset provides  As illustrated in the graph below, 3486 buildings have both right-skewed distribution in number of storeys and units.The average numbers are presented with the blue line. On average, apartment buildings have 7.79 floors and 90.48 units in total. There are more buildings that have less storeys and units that are below the average. In other words, there are less taller buildings and densely packed buildings. 
+
+Figure 1: Toronto Building Number of Confirmed Storeys and Units \ 
+
+```{r, echo=FALSE, results=FALSE}
+hist_storeys<- data %>% 
+  ggplot(aes(x = CONFIRMED_STOREYS)) + 
+  geom_histogram(colour='black', fill='pink', binwidth = 3) + 
+  geom_vline(xintercept = 7.786, color='blue') +
+  theme_classic()+
+  labs(x = "Number of Storeys", y = "Frequency")
+```
+
+
+```{r, echo=FALSE, results=FALSE}
+hist_unit<- data %>% 
+  ggplot(aes(x = CONFIRMED_UNITS)) + 
+  geom_histogram(colour='black', fill='pink', binwidth = 50) + 
+  geom_vline(xintercept = 90.48, color='blue')
+  theme_classic()+
+  labs(x = "Number of Units", y = "Frequency")
+(hist_storeys / hist_unit)
+```
+\ In this project, two dimensions of the conditions will be examined, safety and convenience. For the safety of the building, we will look at the sprinkler, fire safety and heating system. The locker storage room, laundry rooms, number of parking spaces, pet restriction will determine the convenience aspect of the building. 
+
+### Safety Conditions
+First, we look at the safety conditions of Toronto Apartment Buildings. 
+
+```{r, echo=FALSE, include=FALSE}
+sp<- data %>%
+  count(data$SPRINKLER_SYSTEM)
+```
+
+```{r, echo=FALSE, include=FALSE}
+fire <- data %>%
+  count(data$APPROVED_FIRE_SAFETY_PLAN)
+```
+
+```{r, echo=FALSE, include=FALSE}
+power<-data %>%
+  count(data$IS_THERE_EMERGENCY_POWER)
+```
+
+
+|               |   Sprinkler System  | Approved Fire Safety Plan |     Emergency Power|
+| -----------  | ---------- |---------- |---------- |
+|     YES      |   2347  | 3311  |   1451 |
+|     NO       |   1052  | 89    |   1951 |
+|     N/A      |   87  | 86    |   84|
+
+We see that almost buildings have approved fire safety plan by the program. Only 89 buildings need improvement on implementing a safer plan in case of fire emergency. With that being said, 86 buildings have not reported the conditions. On the other hand, a third of buildings does not have a sprinkler system that can detect smoke. Surprisingly, more than half of the buildings does not have emergency back up power system. 
+
+
+
+### Convenience
+The second dimension measured is the convenience of the buildings. The original intention was to analyze the amenities available in the buildings. The amenities are recorded by lists of amenities in the building. My ability of organizing the answers are limited. Perhaps  more skillful professionals can further examine that category. Thus, for this project, we will look at other available functional areas in the building. 
+
+```{r, echo=FALSE, include=FALSE}
+data %>%
+  count(data$LOCKER_OR_STORAGE_ROOM)
+```
+
+
+```{r, echo=FALSE, include=FALSE}
+data %>%
+  count(data$LAUNDRY_ROOM)
+```
+
+Figure 2: Frequency of Spaces in Toronto Buildings
+
+|               |   Storage Rooms  | Laundry Rooms  |
+| -----------  | ---------- |---------- |---------- |
+|     YES      |   1930 | 3289 |
+|     NO       |   1468  | 112   |
+|     N/A      |   88  | 85  |
+
+\ Most Buildings have laundry rooms, only 112 buildings does not, with 85 not available observations. This does not include the case that each unit is equipped with a laundry machine. In this case, it should be more convenient for the residents to use their own machine. Overall speaking, most buildings have laundry rooms. Moreover, half of the buildings does not have storage or locker rooms in the building. Depending on the space available around the neighborhood, residents might not have that much free space for residents to store belongings. 
+
+Furthermore, we examine the available parking spaces of the buildings. We see that half of the buildings have less than 6.559 parking spots available in each building.
+
+```{r, echo=FALSE}
+park<- data %>% 
+  ggplot(aes(x = as.numeric(NO_OF_ACCESSIBLE_PARKING_SPACES))) + 
+  geom_histogram(colour='black', fill='pink', binwidth = 5) + 
+  geom_vline(xintercept = 6.559, color='blue') +
+  theme_classic()+
+  xlim(0, 120) +
+  ylim(0,500) +
+  labs(x = "Parking Spaces", y = "Frequency", title = 'Number of Units')
+park
+```
+\ The Pearson's correlation test was used to determine whether the number of parking spaces is related with the total number of units in the building. The result shows that the correlation coefficient is 0.0029. They are almost not correlated. 
+
+|               |   $r$  | Test-statistics $t$  | Degree of Freedom $df$| P-value $p$  |
+| -----------  | ---------- |---------- |---------- |
+|     Result    |0.229 |  0.16808  | 3360 | 0.8665 |
+
+
+```{r, echo=FALSE, include=FALSE}
+cor.test(data$CONFIRMED_UNITS, as.numeric(data$NO_OF_ACCESSIBLE_PARKING_SPACES), method='pearson')
+```
+
+
+
+
+\newpage
+
+\appendix
+
+# Appendix {-}
+
+
+# Additional details
+
+
+\newpage
+
+
+# References
+
+
+R Core Team. 2020. R: A Language and Environment for Statistical Computing. Vienna, Austria: R
+Foundation for Statistical Computing. https://www.R-project.org/.
+
+RentSafeTO - Apartment Building Standards Program. (2020). City of Toronto. Retrieved February 4, 2022, from https://www.toronto.ca/311/knowledgebase/kb/docs/articles/municipal-licensing-and-standards/investigation-services/mrab/rentsafeto-apartment-building-standards-program.html#:%7E:text=RentSafeTO%3A%20Apartment%20Building%20Standards%20is,comply%20with%20building%20maintenance%20standards.
+  
+Sharla Gelfand (2020). opendatatoronto: Access the City of Toronto
+Open Data Portal. R package version 0.1.4.
+https://CRAN.R-project.org/package=opendatatoronto
+
+Side-by-side plots with ggplot2. (2009, August 8). Stack Overflow. https://stackoverflow.com/questions/1249548/side-by-side-plots-with-ggplot2
+
+
+Thomas Lin Pedersen (2020). patchwork: The Composer of Plots. R
+package version 1.1.1. https://CRAN.R-project.org/package=patchwork
+
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open
+Source Software, 4(43), 1686, https://doi.org/10.21105/joss.01686
+
